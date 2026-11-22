@@ -1,0 +1,27 @@
+name: laps
+description: "run laps: a pencil-drawn GPS lap counter"
+publish_to: 'none'
+version: 1.2.0+3
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  geolocator: ^14.1.2
+  shared_preferences: ^2.5.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: RedHatMono
+      fonts:
+        - asset: assets/fonts/RedHatMono-Variable.ttf
+  assets:
+    - shorebird.yaml
