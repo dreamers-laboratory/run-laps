@@ -2,7 +2,7 @@
 
 Created by [Dreamers Inc.](https://thedreamers.us/).
 
-A GPS lap counter for a running track, drawn in pencil. Android.
+A GPS lap counter for a running track, drawn in pencil. Android and iPhone.
 
 - Pick a distance and your lane. Laps and distance use that lane's real length (lane 1 is 400 m, lane 8 is 453 m).
 - Press ▶ and run. Hold ■ for 3 seconds to stop.
@@ -15,16 +15,24 @@ A GPS lap counter for a running track, drawn in pencil. Android.
 
 Flutter 3.47 or newer.
 
+Android:
+
 ```bash
 flutter build apk --release
 adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+iPhone (Xcode; set your own signing team in `ios/Runner.xcodeproj` to run it on a phone):
+
+```bash
+flutter run --release
 ```
 
 Allow precise location while using the app.
 
 ## Battery mode
 
-On by default. The run screen is a little dimmer while you run. It can also turn on the phone's battery saver for the run and turn it back off when you stop, once you allow it over USB:
+On by default. The run screen is a little dimmer while you run. On Android it can also turn on the phone's battery saver for the run and turn it back off when you stop, once you allow it over USB:
 
 ```bash
 adb shell pm grant us.thedreamers.laps android.permission.WRITE_SECURE_SETTINGS

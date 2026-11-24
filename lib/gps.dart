@@ -7,8 +7,8 @@ import 'engine.dart';
 
 enum GpsState { waiting, ok, denied, off, approx, lost }
 
-/// The GPS chip itself (LocationManager's GPS provider), one fix a second with its Doppler speed.
-/// During a run it runs in a location foreground service, so it keeps going with the screen off.
+/// One fix a second with its Doppler speed: the GPS chip itself on Android, Core Location's best on iPhone.
+/// During a run it keeps going with the screen off (a foreground service on Android, background location on iPhone).
 class Gps {
   final void Function(Fix) onFix;
   final VoidCallback onChange;
@@ -18,6 +18,7 @@ class Gps {
   StreamSubscription<Position>? _sub;
   StreamSubscription<ServiceStatus>? _svc;
   Timer? _watch;
+  Future<void> _starting = Future.value();
 
   Gps(this.onFix, this.onChange);
 
@@ -59,28 +60,41 @@ class Gps {
     return true;
   }
 
-  Future<void> start({required bool foreground}) async {
+  /// One start at a time, so two never ask for permission at once or leave two streams running.
+  Future<void> start({required bool foreground}) =>
+      _starting = _starting.then((_) => _start(foreground)).catchError((Object e) => debugPrint('LAPS gps start $e'));
+
+  Future<void> _start(bool foreground) async {
     _foreground = foreground;
     if (!await ensure()) return;
     await _sub?.cancel();
     _sub =
         Geolocator.getPositionStream(
-          locationSettings: AndroidSettings(
-            accuracy: LocationAccuracy.best,
-            distanceFilter: 0,
-            intervalDuration: const Duration(seconds: 1),
-            forceLocationManager: true,
-            foregroundNotificationConfig: foreground
-                ? const ForegroundNotificationConfig(
-                    notificationTitle: 'run laps',
-                    notificationText: 'counting your laps',
-                    notificationChannelName: 'Run',
-                    notificationIcon: AndroidResource(name: 'ic_stat_laps', defType: 'drawable'),
-                    enableWakeLock: true,
-                    setOngoing: true,
-                  )
-                : null,
-          ),
+          locationSettings: defaultTargetPlatform == TargetPlatform.iOS
+              ? AppleSettings(
+                  accuracy: LocationAccuracy.best,
+                  distanceFilter: 0,
+                  activityType: ActivityType.fitness,
+                  pauseLocationUpdatesAutomatically: false,
+                  allowBackgroundLocationUpdates: foreground,
+                  showBackgroundLocationIndicator: foreground,
+                )
+              : AndroidSettings(
+                  accuracy: LocationAccuracy.best,
+                  distanceFilter: 0,
+                  intervalDuration: const Duration(seconds: 1),
+                  forceLocationManager: true,
+                  foregroundNotificationConfig: foreground
+                      ? const ForegroundNotificationConfig(
+                          notificationTitle: 'run laps',
+                          notificationText: 'counting your laps',
+                          notificationChannelName: 'Run',
+                          notificationIcon: AndroidResource(name: 'ic_stat_laps', defType: 'drawable'),
+                          enableWakeLock: true,
+                          setOngoing: true,
+                        )
+                      : null,
+                ),
         ).listen(
           _onPos,
           onError: (Object e) {
