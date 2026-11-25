@@ -48,4 +48,13 @@ Simulated runners on a noisy GPS: every lane, track sensing, runs off the track,
 
 ## License
 
-[WTFPL](LICENSE). Red Hat Mono is under the [SIL Open Font License](assets/fonts/OFL.txt).
+Run Laps' original source is licensed under [Apache 2.0](LICENSE).
+See [NOTICE](NOTICE) for original-author attribution.
+
+The [earlier source revisions](https://github.com/dreamers-laboratory/run-laps/blob/dfac2ce163a95846f73ea948cddc74fa6ee29eaf/LICENSE)
+remain available under their historical WTFPL license.
+
+Red Hat Mono retains the [SIL Open Font License](assets/fonts/OFL.txt).
+The Flutter-generated platform scaffold retains
+[Flutter's BSD 3-Clause license](licenses/flutter.txt). Dependencies retain
+their own licenses.
