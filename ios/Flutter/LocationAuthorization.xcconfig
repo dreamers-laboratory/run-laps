@@ -1,0 +1,2 @@
+// Apply to the geolocator SwiftPM target as well as Runner.
+OTHER_CFLAGS = $(inherited) -UBYPASS_PERMISSION_LOCATION_ALWAYS -DBYPASS_PERMISSION_LOCATION_ALWAYS=1

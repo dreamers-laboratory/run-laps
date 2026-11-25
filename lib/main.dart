@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import 'about.dart';
 import 'engine.dart';
 import 'goal.dart';
 import 'gps.dart';
@@ -839,6 +840,16 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Text('no runs yet. stop a run and it shows up here.', style: mono(13)),
         ),
       for (final e in runs) _card(e),
+      const SizedBox(height: 20),
+      const Divider(color: C.rule, height: 1),
+      ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        title: Text('ABOUT', style: mono(12)),
+        trailing: const Icon(Icons.chevron_right, size: 18, color: C.ink),
+        onTap: () => Navigator.of(context).push<void>(
+          MaterialPageRoute(builder: (_) => const RunLapsAboutPage()),
+        ),
+      ),
     ]);
   }
 

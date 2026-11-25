@@ -1,7 +1,7 @@
 name: laps
 description: "run laps: a pencil-drawn GPS lap counter"
 publish_to: 'none'
-version: 1.2.0+3
+version: 1.2.1+4
 
 environment:
   sdk: ^3.13.4
@@ -11,9 +11,12 @@ dependencies:
     sdk: flutter
   geolocator: ^14.1.2
   shared_preferences: ^2.5.6
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
 

@@ -30,6 +30,23 @@ flutter run --release
 
 Allow precise location while using the app.
 
+### TestFlight builds
+
+Use When In Use authorization for GPS. Start the run while the app is open;
+background location updates let an active run keep counting when the screen locks.
+Keep the unused Always authorization request out of the iOS binary:
+
+```bash
+XCODE_XCCONFIG_FILE="$PWD/ios/Flutter/LocationAuthorization.xcconfig" \
+  flutter build ipa --release --no-codesign
+xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive \
+  -exportOptionsPlist /path/to/ExportOptions.plist -exportPath build/ios/ipa
+bash tool/check_ios_ipa.sh build/ios/ipa/laps.ipa
+```
+
+Export using your team's App Store Connect signing settings, then run the check
+on the exact signed IPA you intend to upload.
+
 ## Battery mode
 
 On by default. The run screen is a little dimmer while you run. On Android it can also turn on the phone's battery saver for the run and turn it back off when you stop, once you allow it over USB:
