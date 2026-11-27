@@ -136,6 +136,11 @@ void main() {
     });
   });
 
+  test('the caps are the world records run 20% faster', () {
+    expect(maxMps, closeTo(12.53, 0.01)); // 100 m in 9.58 s
+    expect(maxLapMps, closeTo(11.16, 0.01)); // 400 m in 43.03 s: a 400 m lap no quicker than 35.9 s
+  });
+
   group('GPS jumps', () {
     // A GPS simulator, or a stale first fix: the first position is one place, every one after it
     // another place 2 km off, where the phone barely moves.
@@ -169,7 +174,7 @@ void main() {
         expect(res.metres, lessThan(150), reason: 'seed $seed');
       }
     });
-    test('no lap is ever quicker than a world record', () {
+    test('no lap is ever past the cap: the 400 m world record run 20% faster', () {
       final sim = Sim(2, seed: 5), r = Run(2, 0);
       var pos = 0.0, t = 0;
       for (var i = 0; i < 400; i++) {
@@ -184,7 +189,7 @@ void main() {
       }
       final laps = [0, ...r.laps];
       for (var i = 1; i < laps.length; i++) {
-        expect(laps[i] - laps[i - 1], greaterThan(r.L / 9 * 1000), reason: 'lap $i');
+        expect(laps[i] - laps[i - 1], greaterThanOrEqualTo(r.L / maxLapMps * 1000), reason: 'lap $i');
       }
       expect(r.laps.length, lessThanOrEqualTo((400 * 3.4 / r.L).floor()));
     });

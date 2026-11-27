@@ -8,6 +8,9 @@ export 'track.dart';
 
 const double mile = 1609.344;
 const double mpsToMph = 3600 / mile;
+
+/// The caps: the world records run 20% faster. 100 m in 9.58 s for any moment, 400 m in 43.03 s for a lap.
+const double maxMps = 1.2 * 100 / 9.58, maxLapMps = 1.2 * 400 / 43.03;
 const double _earth = 6371008.8, _k = math.pi / 180;
 
 class Fix {
@@ -237,7 +240,7 @@ void closeWindow(Run r) {
   final w = r.win!;
   r.win = null;
   final t = passTime(w);
-  if (t - r.lastLapT < r.L / 9 * 1000) return; // quicker than a world record: not a lap
+  if (t - r.lastLapT < r.L / maxLapMps * 1000) return; // past the cap: not a lap
   _closeLap(r, t, w.since, true);
   r.armed = false;
 }
@@ -250,11 +253,11 @@ double _median(List<double> v) {
 double _startR(Run r, double acc) => math.min(0.09 * r.L, math.max(20.0, 2.5 * acc));
 double _gate(Run r, double acc) => math.max(0.15 * r.L, _startR(r, acc) + 15);
 
-/// Further from the last good fix than anyone runs (12 m/s): a bad fix. Still that far 10 s on, GPS
+/// Further from the last good fix than the cap allows (maxMps): a bad fix. Still that far 10 s on, GPS
 /// really moved (a stale first fix, a GPS simulator): the jump is lifted over like a gap and never
 /// counted as running. If nothing was run yet, the run starts at the new place.
 bool _jumped(Run r, Pt p, int t) {
-  if (r.prevP == null || p.dist(r.prevP!) / math.max((t - r.prevT) / 1000, 0.2) <= 12) return false;
+  if (r.prevP == null || p.dist(r.prevP!) / math.max((t - r.prevT) / 1000, 0.2) <= maxMps) return false;
   if (t - r.prevT < 10000) return true;
   _lift(r);
   if (r.laps.isEmpty && !r.off && r.total < 20 && r.odo < 20) {
@@ -308,7 +311,7 @@ int feed(Run r, Fix fix) {
   if (v == null && r.lastSm != null && fix.t > r.lastSmT) v = sm.dist(r.lastSm!) / ((fix.t - r.lastSmT) / 1000);
   r.lastSm = sm;
   r.lastSmT = fix.t;
-  if (v != null && v < 13) {
+  if (v != null && v < maxMps) {
     r.vbuf.add(v);
     if (r.vbuf.length > 3) r.vbuf.removeAt(0);
     r.speedNow = _median(r.vbuf);
@@ -371,9 +374,9 @@ int feed(Run r, Fix fix) {
       }
       if ((ds >= rr + 10 && w.after >= 2) || (ds > w.d + 20 && w.after >= 4) || ds > rr + 30) closeWindow(r);
     }
-    // the pass by the start was lost to a GPS gap (and never quicker than a world record)
+    // the pass by the start was lost to a GPS gap (and never past the lap cap)
     final at = r.crossT ?? fix.t;
-    if (r.win == null && ds > gate && r.since > 1.5 * lg && at - r.lastLapT >= r.L / 9 * 1000) {
+    if (r.win == null && ds > gate && r.since > 1.5 * lg && at - r.lastLapT >= r.L / maxLapMps * 1000) {
       _closeLap(r, at, lg, false);
     }
   }
@@ -520,12 +523,13 @@ Reg? _register(Run r) {
 
 void _adopt(Run r, Reg g, int t) {
   final wasDir = r.dir, wasU = r.uStart ?? r.oval.uFinish;
+  final kept = r.sense == 'sensed' && r.anchored; // a surer fit keeps a start already on the track
   r.oval = g.oval;
   r.geo = g.geo;
   r.dir = g.dir;
   r.sense = 'sensed';
   r.senseS = r.dec.s.last;
-  _placeStart(r);
+  _placeStart(r, kept: kept);
   if (r.dir != wasDir || !r.oval.standard || r.uStart == null || _gapM(r.oval, r.uStart!, wasU) > 25) r.sensedAt = t;
 }
 
