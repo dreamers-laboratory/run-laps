@@ -250,15 +250,45 @@ double _median(List<double> v) {
 double _startR(Run r, double acc) => math.min(0.09 * r.L, math.max(20.0, 2.5 * acc));
 double _gate(Run r, double acc) => math.max(0.15 * r.L, _startR(r, acc) + 15);
 
+/// Further from the last good fix than anyone runs (12 m/s): a bad fix. Still that far 10 s on, GPS
+/// really moved (a stale first fix, a GPS simulator): the jump is lifted over like a gap and never
+/// counted as running. If nothing was run yet, the run starts at the new place.
+bool _jumped(Run r, Pt p, int t) {
+  if (r.prevP == null || p.dist(r.prevP!) / math.max((t - r.prevT) / 1000, 0.2) <= 12) return false;
+  if (t - r.prevT < 10000) return true;
+  _lift(r);
+  if (r.laps.isEmpty && !r.off && r.total < 20 && r.odo < 20) {
+    r
+      ..ref = null
+      ..start = null
+      ..cur = null
+      ..lastFixT = 0
+      ..top = 0
+      ..lapTopNow = 0
+      ..speedNow = 0
+      ..oval = Oval.lane(r.lane)
+      ..geo = null
+      ..dir = r.defDir
+      ..sense = 'default'
+      ..uStart = null
+      ..sensedAt = null
+      ..anchored = true
+      ..tInBand = 0
+      ..odoInBand = 0
+      ..fracInBand = Frac.zero;
+    r.trace.clear();
+    r.dec.fromStart = true;
+  }
+  return false;
+}
+
 /// Feed one fix; returns how many laps it completed.
 int feed(Run r, Fix fix) {
   if (!(fix.acc <= 30)) return 0;
+  if (r.ref != null && _jumped(r, _toXY(r.ref!, fix.lat, fix.lon), fix.t)) return 0;
   final first = r.ref == null;
   r.ref ??= {'lat': fix.lat, 'lon': fix.lon};
   final p = _toXY(r.ref!, fix.lat, fix.lon);
-  if (r.prevP != null && fix.t - r.prevT < 10000 && p.dist(r.prevP!) / math.max((fix.t - r.prevT) / 1000, 0.2) > 12) {
-    return 0; // a teleport: bad fix
-  }
   r.prevP = p;
   r.prevT = fix.t;
   r.start ??= p;
@@ -341,8 +371,11 @@ int feed(Run r, Fix fix) {
       }
       if ((ds >= rr + 10 && w.after >= 2) || (ds > w.d + 20 && w.after >= 4) || ds > rr + 30) closeWindow(r);
     }
-    // the pass by the start was lost to a GPS gap
-    if (r.win == null && ds > gate && r.since > 1.5 * lg) _closeLap(r, r.crossT ?? fix.t, lg, false);
+    // the pass by the start was lost to a GPS gap (and never quicker than a world record)
+    final at = r.crossT ?? fix.t;
+    if (r.win == null && ds > gate && r.since > 1.5 * lg && at - r.lastLapT >= r.L / 9 * 1000) {
+      _closeLap(r, at, lg, false);
+    }
   }
   return r.laps.length - before;
 }
@@ -724,6 +757,11 @@ void _anchor(Run r, int t, Pt p) {
 /// Stopped from a to b, then going again.
 void resumeRun(Run r, int a, int b) {
   r.pauses.add([a, b]);
+  _lift(r);
+}
+
+/// A break in the path: nothing measured across it.
+void _lift(Run r) {
   r
     ..prevP = null
     ..buf = []

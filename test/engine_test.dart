@@ -136,6 +136,60 @@ void main() {
     });
   });
 
+  group('GPS jumps', () {
+    // A GPS simulator, or a stale first fix: the first position is one place, every one after it
+    // another place 2 km off, where the phone barely moves.
+    ({int laps, double metres, double? mph}) jumpThenStill(int lane, {int seed = 1, bool interleave = false}) {
+      final g = Gnss(seed, sigma: 2, drift: 1), r = Run(lane, 0);
+      feed(r, fixAt(const Pt(0, 0), 0, acc: 8));
+      var t = 0;
+      for (var i = 0; i < 120; i++) {
+        t += 1000;
+        final there = Pt(1700 + i * 0.3, 1200); // 2.08 km away, drifting 0.3 m/s
+        feed(r, fixAt(interleave && i.isOdd ? g.noisy(const Pt(0, 0), 1) : g.noisy(there, 1), t, acc: 8));
+      }
+      final s = stats(r, t, fracs(r));
+      return (laps: r.laps.length, metres: s.metres, mph: s.mph);
+    }
+
+    for (final lane in [1, 4, 8]) {
+      test('a jump of 2 km after the first fix is not run: lane $lane, 10 seeds', () {
+        for (var seed = 1; seed <= 10; seed++) {
+          final res = jumpThenStill(lane, seed: seed);
+          expect(res.laps, 0, reason: 'seed $seed');
+          expect(res.metres, lessThan(150), reason: 'seed $seed');
+          expect(res.mph ?? 0, lessThan(3), reason: 'seed $seed');
+        }
+      });
+    }
+    test('fixes flipping between two places 2 km apart count nothing', () {
+      for (var seed = 1; seed <= 10; seed++) {
+        final res = jumpThenStill(8, seed: seed, interleave: true);
+        expect(res.laps, 0, reason: 'seed $seed');
+        expect(res.metres, lessThan(150), reason: 'seed $seed');
+      }
+    });
+    test('no lap is ever quicker than a world record', () {
+      final sim = Sim(2, seed: 5), r = Run(2, 0);
+      var pos = 0.0, t = 0;
+      for (var i = 0; i < 400; i++) {
+        pos += 3.4;
+        t += 1000;
+        feed(r, sim.fix(pos, t, spd: 3.4));
+      }
+      // then 3 km away in an instant, and still
+      for (var i = 0; i < 60; i++) {
+        t += 1000;
+        feed(r, fixAt(Pt(3000, 0 + i * 0.2), t, acc: 6));
+      }
+      final laps = [0, ...r.laps];
+      for (var i = 1; i < laps.length; i++) {
+        expect(laps[i] - laps[i - 1], greaterThan(r.L / 9 * 1000), reason: 'lap $i');
+      }
+      expect(r.laps.length, lessThanOrEqualTo((400 * 3.4 / r.L).floor()));
+    });
+  });
+
   group('stops', () {
     test('stopped time is not running time, laps after the press do not count', () {
       final sim = Sim(1, seed: 7);
